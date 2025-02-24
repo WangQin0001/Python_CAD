@@ -1,0 +1,11 @@
+autocad:
+  template_path: "F:/repo/Python_CAD/resources/KLCOB.dwg"
+  output_file: "Generated_Display_Screen.dwg"
+
+default_params:  # 必须与autocad同级
+  rows: 10
+  cols: 4
+  box_width: 600
+  box_height: 337.5
+  spacing_x: 0
+  spacing_y: 0

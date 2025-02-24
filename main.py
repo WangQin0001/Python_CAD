@@ -1,57 +1,41 @@
-MAX_LINE = 5
-MIN_BET = 1
-MAX_BET = 100
-
-
-def deposit():
-    while True:
-        amount = input("What would you like to deposit? $")
-        if amount.isdigit():
-            amount = int(amount)
-            if amount > 0:
-                break
-            else:
-                print("Amount must be greater than 0")
-        else:
-            print("Please entr a number")
-    return amount
-
-
-def get_bet():
-    while True:
-        amount = input("What would you like to bet on each line? $")
-        if amount.isdigit():
-            amount = int(amount)
-            if MIN_BET <= amount <= MAX_BET:
-                break
-            else:
-                print(f"Amount must between ${MIN_BET} - ${MAX_BET}")
-        else:
-            print("Please enter a number")
-    return amount
-
-
-def get_number_of_lines():
-    while True:
-        lines = input("Enter the number of lines to bet on (1-" + str(MAX_LINE) + ") ?")
-        if lines.isdigit():
-            lines = int(lines)
-            if 1 <= lines <= MAX_LINE:
-                break
-            else:
-                print("Enter a valid number of lines")
-        else:
-            print("Please entr a number")
-    return lines
+import argparse
+from src.config_loader import load_config
+from src.cad_utils import CADManager
+from src.layout_generator import LayoutGenerator, LayoutParams
 
 
 def main():
-    balance = deposit()
-    lines = get_number_of_lines()
-    bet = get_bet()
-    total_bet = bet * lines
-    print(f"You are betting ${bet} on {lines} lines,Total bet is {total_bet}")
-    print(balance, lines)
+    # 命令行参数解析
+    parser = argparse.ArgumentParser(description="自动化CAD显示屏生成系统")
+    parser.add_argument("--rows", type=int, help="行数")
+    parser.add_argument("--cols", type=int, help="列数")
+    parser.add_argument("--width", type=float, help="箱体宽度")
+    parser.add_argument("--height", type=float, help="箱体高度")
+    args = parser.parse_args()
+
+    # 加载配置
+    config = load_config()
+
+    # 合并配置与命令行参数
+    params = LayoutParams(
+        rows=args.rows or config["default_params"]["rows"],
+        cols=args.cols or config["default_params"]["cols"],
+        box_width=args.width or config["default_params"]["box_width"],
+        box_height=args.height or config["default_params"]["box_height"],
+        spacing_x=config["default_params"]["spacing_x"],
+        spacing_y=config["default_params"]["spacing_y"],
+    )
+
+    # 初始化CAD系统
+    cad = CADManager(config["autocad"]["template_path"])
+
+    # 生成布局
+    generator = LayoutGenerator(cad)
+    generator.generate_grid(params)
+
+    # 保存图纸
+    cad.save_drawing(config["autocad"]["output_file"])
 
 
-main()
+if __name__ == "__main__":
+    main()
