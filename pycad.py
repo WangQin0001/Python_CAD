@@ -1,32 +1,50 @@
 from pyautocad import Autocad, APoint
+import pythoncom
+import os
+import time
 
-# 初始化 AutoCAD 接口
-acad = Autocad(create_if_not_exists=True)
+# 初始化COM库
+pythoncom.CoInitialize()
 
+try:
+    # 显式创建AutoCAD实例
+    acad = Autocad(create_if_not_exists=True)
+    acad.app.Visible = True
+    time.sleep(3)  # 等待AutoCAD启动
 
-# 加载模板路径
-template_path = r"F:\repo\Python_CAD\resources\KLCOB.dwg"  # 替换为实际模板路径
+    # 验证模板路径
+    template_path = r"F:\repo\Python_CAD\resources\KLCOB.dwg"
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"模板文件不存在于：{template_path}")
 
+    # 带重试的插入函数
+    def insert_box_template(x, y, retries=3):
+        for attempt in range(retries):
+            try:
+                acad.model.InsertBlock(APoint(x, y), template_path, 1, 1, 1, 0)
+                return
+            except pythoncom.com_error as e:
+                if attempt == retries - 1:
+                    raise
+                print(f"插入fail，正在重试 ({attempt+1}/{retries})")
+                time.sleep(1)
 
-# 插入模板的函数
-def insert_box_template(x, y):
-    acad.model.InsertBlock(APoint(x, y), template_path, 1, 1, 1, 0)
-
-
-# 根据参数拼接显示屏图纸
-def generate_display_screen(rows, cols, box_width, box_height):
-    start_x, start_y = 0, 0  # 起始位置
-
-    for row in range(rows):
-        for col in range(cols):
-            x_pos = start_x + col * box_width
+    # 生成显示矩阵
+    def generate_display_screen(rows, cols, box_width, box_height):
+        start_x, start_y = 0, 0
+        for row in range(rows):
             y_pos = start_y + row * box_height
-            insert_box_template(x_pos, y_pos)
+            for col in range(cols):
+                x_pos = start_x + col * box_width
+                insert_box_template(x_pos, y_pos)
+                time.sleep(0.1)  # 降低调用频率
 
+    # 执行生成
+    generate_display_screen(4, 4, 600, 337.5)
 
-# 示例：生成10行4列的显示屏，每个箱体的尺寸为300x200单位
-generate_display_screen(10, 4, 600, 337.5)
-acad.quit()
-# 完成后保存图纸
-acad.doc.SaveAs("Generated_Display_Screen.dwg")
-acad.Application.Quit()
+    # 保存文档
+    acad.doc.SaveAs("Correct_Display_Screen.dwg")
+
+finally:
+    # 清理COM资源
+    pythoncom.CoUninitialize()
